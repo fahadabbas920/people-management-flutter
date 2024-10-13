@@ -1,17 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GlobalState with ChangeNotifier {
-  String _email = '';
+  String? _email;
 
-  String get email => _email;
+  String? get email => _email;
 
-  void setEmail(String newEmail) {
-    _email = newEmail;
-    notifyListeners(); // Notify listeners about the change
+  // Method to set email and save it to SharedPreferences
+  Future<void> setEmail(String email) async {
+    _email = email;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('email', email); // Store email
   }
 
-  void clearEmail() {
-    _email = '';
-    notifyListeners(); // Notify listeners about the change
+  // Method to clear email and remove it from SharedPreferences
+  Future<void> clearEmail() async {
+    _email = null;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('email'); // Clear email
+  }
+
+  // Method to load email from SharedPreferences
+  Future<void> loadEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    _email = prefs.getString('email'); // Load email
+    notifyListeners();
   }
 }

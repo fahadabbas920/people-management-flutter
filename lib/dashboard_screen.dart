@@ -1,8 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:myapp/login_screen.dart';
 import 'add_person_screen.dart';
 import 'person.dart';
-import 'global_state.dart'; // Import the GlobalState
-import 'package:provider/provider.dart'; // Import provider package
+import 'global_state.dart';
+import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -12,26 +17,79 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final List<Person> _persons = [];
+  List<Person> _persons = [];
 
-  void _addOrUpdatePerson(Person person, [int? index]) {
-    if (index != null) {
-      // Update existing person
-      setState(() {
-        _persons[index] = person;
-      });
-    } else {
-      // Add new person
-      setState(() {
-        _persons.add(person);
-      });
+  @override
+  void initState() {
+    super.initState();
+    _fetchPersons();
+  }
+
+  Future<void> _fetchPersons() async {
+    final String peopleUrl = '${dotenv.env['BASE_URL']}/api/people';
+    try {
+      final response = await http.get(Uri.parse(peopleUrl));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> responseData = jsonDecode(response.body);
+        if (responseData is List) {
+          setState(() {
+            _persons = responseData
+                .map((personData) => Person.fromJson(personData))
+                .toList();
+          });
+        } else {
+          throw Exception('Expected a list of persons');
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to fetch persons: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      print('Error fetching persons: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An error occurred while fetching data.')),
+      );
     }
   }
 
-  void _removePerson(int index) {
+  void _addOrUpdatePerson(Person person, [int? index]) {
     setState(() {
-      _persons.removeAt(index);
+      if (index != null) {
+        // Update existing person
+        _persons[index] = person;
+      } else {
+        // Add new person
+        _persons.add(person);
+      }
     });
+  }
+
+  void _removePerson(int index) async {
+    final personId = _persons[index].id;
+    final String deleteUrl = '${dotenv.env['BASE_URL']}/api/people/$personId';
+
+    try {
+      final response = await http.delete(Uri.parse(deleteUrl));
+      if (response.statusCode == 200) {
+        setState(() {
+          _persons.removeAt(index);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Person deleted successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete person')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('An error occurred while deleting the person.')),
+      );
+    }
   }
 
   void _navigateToAddPersonScreen(BuildContext context,
@@ -50,12 +108,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _logout(BuildContext context) {
-    // Clear global state
-    Provider.of<GlobalState>(context, listen: false).clearEmail();
+  void _logout(BuildContext context) async {
+    final String logoutUrl = '${dotenv.env['BASE_URL']}/api/logout';
+    try {
+      final response = await http.post(Uri.parse(logoutUrl));
 
-    // Navigate back to LoginScreen
-    Navigator.popUntil(context, (route) => route.isFirst);
+      if (response.statusCode == 200) {
+        // Clear global state
+        await Provider.of<GlobalState>(context, listen: false).clearEmail();
+
+        // Navigate back to LoginScreen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to logout')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An error occurred during logout.')),
+      );
+    }
   }
 
   @override
@@ -66,7 +142,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => _logout(context), // Logout action
+            onPressed: () => _logout(context),
           ),
         ],
       ),
@@ -81,7 +157,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   child: ListTile(
                     title: Text('${person.name} ${person.surname}'),
-                    subtitle: Text('ID: ${person.idNumber}'),
+                    subtitle: Text(
+                      'ID: ${person.idNumber}\n'
+                      'Mobile: ${person.mobileNumber}\n'
+                      'Email: ${person.email}',
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

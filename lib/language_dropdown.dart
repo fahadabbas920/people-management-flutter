@@ -6,7 +6,7 @@ class LanguageDropdown extends StatelessWidget {
 
   final List<String> languages = ['English', 'Afrikaans', 'Zulu'];
 
-  LanguageDropdown({super.key, required this.onLanguageSelected, this.selectedLanguage});
+  LanguageDropdown({super.key, required this.onLanguageSelected, this.selectedLanguage, required Null Function(dynamic value) onChanged});
 
   @override
   Widget build(BuildContext context) {

@@ -6,7 +6,7 @@ class InterestsCheckbox extends StatelessWidget {
 
   final List<String> interests = ['Reading', 'Sports', 'Traveling', 'Music'];
 
-  InterestsCheckbox({super.key, required this.selectedInterests, required this.onInterestsChanged});
+  InterestsCheckbox({super.key, required this.selectedInterests, required this.onInterestsChanged, required List<String> interests, required Null Function(dynamic value) onChanged});
 
   @override
   Widget build(BuildContext context) {
