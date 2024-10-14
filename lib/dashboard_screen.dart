@@ -32,16 +32,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       if (response.statusCode == 200) {
         final List<dynamic> responseData = jsonDecode(response.body);
-        if (responseData is List) {
-          setState(() {
-            _persons = responseData
-                .map((personData) => Person.fromJson(personData))
-                .toList();
-          });
-        } else {
-          throw Exception('Expected a list of persons');
-        }
-      } else {
+        setState(() {
+          _persons = responseData
+              .map((personData) => Person.fromJson(personData))
+              .toList();
+        });
+            } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to fetch persons: ${response.body}')),
         );

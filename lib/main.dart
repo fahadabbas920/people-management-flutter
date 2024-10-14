@@ -49,7 +49,7 @@ class HomeScreen extends StatelessWidget {
         } else {
           // Check if the email is not null (indicating a logged-in user)
           if (snapshot.hasData && snapshot.data != null) {
-            return DashboardScreen(); // Navigate to Dashboard if logged in
+            return const DashboardScreen(); // Navigate to Dashboard if logged in
           } else {
             return LoginScreen(); // Otherwise show LoginScreen
           }

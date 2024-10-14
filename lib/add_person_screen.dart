@@ -9,8 +9,7 @@ class AddPersonScreen extends StatefulWidget {
   final Function(Person) onSave;
   final Person? person;
 
-  const AddPersonScreen({Key? key, required this.onSave, this.person})
-      : super(key: key);
+  const AddPersonScreen({super.key, required this.onSave, this.person});
 
   @override
   _AddPersonScreenState createState() => _AddPersonScreenState();
