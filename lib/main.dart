@@ -29,7 +29,13 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Person App',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const HomeScreen(),
+      // Define routes here
+      routes: {
+        '/': (context) => const HomeScreen(), // Initial route
+        '/login': (context) =>  LoginScreen(), // Explicit route for login
+        '/dashboard': (context) => const DashboardScreen(), // Explicit route for dashboard
+      },
+      initialRoute: '/', // Set the initial route
       debugShowCheckedModeBanner: false,
     );
   }
@@ -40,26 +46,32 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _loadEmail(),
+    return FutureBuilder<bool>(
+      future: _loadUserStatus(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           // While loading, show a loading spinner
           return const Center(child: CircularProgressIndicator());
         } else {
-          // Check if the email is not null (indicating a logged-in user)
-          if (snapshot.hasData && snapshot.data != null) {
-            return const DashboardScreen(); // Navigate to Dashboard if logged in
+          // Check if the user is logged in
+          if (snapshot.hasData && snapshot.data == true) {
+            // Navigate to Dashboard if logged in
+            return const DashboardScreen();
           } else {
-            return LoginScreen(); // Otherwise show LoginScreen
+            // Otherwise show LoginScreen
+            return  LoginScreen();
           }
         }
       },
     );
   }
 
-  Future<String?> _loadEmail() async {
+  Future<bool> _loadUserStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('email'); // Load email from SharedPreferences
+    final email = prefs.getString('email');
+    final csrfToken = prefs.getString('csrf_token'); // Load CSRF token if needed
+
+    // Check if both email and CSRF token are present
+    return email != null && csrfToken != null; // Return true if both are present
   }
 }

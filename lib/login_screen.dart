@@ -1,72 +1,86 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dashboard_screen.dart';
-import 'global_state.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'global_state.dart';
+import 'package:provider/provider.dart';
 
-class LoginScreen extends StatelessWidget {
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+class LoginScreen extends StatefulWidget {
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
 
-  LoginScreen({super.key});
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _emailController;
+  late TextEditingController _passwordController;
 
-  Future<void> _login(BuildContext context) async {
-    String email = _usernameController.text;
-    String password = _passwordController.text;
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController();
+    _passwordController = TextEditingController();
+  }
 
-    // Validate email and password
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email.')),
-      );
-      return;
-    }
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
-    if (password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your password.')),
-      );
-      return;
-    }
-
-    // API endpoint for authentication
-    final String loginUrl = '${dotenv.env['BASE_URL']}/api/login';
-
+  Future<void> login(String email, String password) async {
     try {
       final response = await http.post(
-        Uri.parse(loginUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-          'remember': false, // Include remember option if necessary
-        }),
+        Uri.parse('${dotenv.env['BASE_URL']}/api/login'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        
-        // Save email to global state
-        Provider.of<GlobalState>(context, listen: false).setEmail(email);
+        // Parse the response body
+        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+        final user = responseBody['user'];
+        final token = responseBody['token'];
+        String userId = user['id'].toString();
+        // Save email, user data, and token in global state
+        Provider.of<GlobalState>(context, listen: false)
+            .setEmailAndToken(email, token, userId, user['name']);
 
-        // Navigate to Dashboard
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
+        // Navigate to the Dashboard after successful login
+        Navigator.pushReplacementNamed(context, '/dashboard');
       } else {
-        // Handle error responses
-        final Map<String, dynamic> errorData = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorData['message'] ?? 'Login failed')),
-        );
+        // Handle login failure
+        _showErrorDialog(
+            'Login failed. Please check your credentials and try again.');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('An error occurred. Please try again.')),
-      );
+      // Handle exceptions
+      _showErrorDialog('An error occurred: $e');
+    }
+  }
+
+  String extractCsrfToken(String? cookies) {
+    if (cookies != null) {
+      // Split cookies and find CSRF token
+      final cookieList = cookies.split(';');
+      for (var cookie in cookieList) {
+        if (cookie.contains('XSRF-TOKEN')) {
+          // Adjust based on actual cookie name
+          return cookie.split('=')[1].trim();
+        }
+      }
+    }
+    throw Exception('CSRF token not found in cookies');
+  }
+
+  void _login() {
+    if (_formKey.currentState!.validate()) {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+      login(email, password);
     }
   }
 
@@ -76,30 +90,51 @@ class LoginScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Login'),
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
             children: [
-              const Text("Please login to continue"),
-              TextField(
-                controller: _usernameController,
+              TextFormField(
+                controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter your email' : null,
               ),
-              TextField(
+              TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter your password' : null,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () => _login(context), // Call the login function
+                onPressed: _login,
                 child: const Text('Login'),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text('Okay'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
+          ),
+        ],
       ),
     );
   }

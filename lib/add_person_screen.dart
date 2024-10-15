@@ -4,6 +4,8 @@ import 'person.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'global_state.dart';
+import 'package:provider/provider.dart';
 
 class AddPersonScreen extends StatefulWidget {
   final Function(Person) onSave;
@@ -31,19 +33,13 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
     super.initState();
 
     _nameController = TextEditingController(text: widget.person?.name ?? '');
-    _surnameController =
-        TextEditingController(text: widget.person?.surname ?? '');
-    _idNumberController =
-        TextEditingController(text: widget.person?.idNumber ?? '');
-    _mobileNumberController =
-        TextEditingController(text: widget.person?.mobileNumber ?? '');
+    _surnameController = TextEditingController(text: widget.person?.surname ?? '');
+    _idNumberController = TextEditingController(text: widget.person?.idNumber ?? '');
+    _mobileNumberController = TextEditingController(text: widget.person?.mobileNumber ?? '');
     _emailController = TextEditingController(text: widget.person?.email ?? '');
-    _dateOfBirthController =
-        TextEditingController(text: widget.person?.dateOfBirth ?? '');
-    _languageController =
-        TextEditingController(text: widget.person?.language ?? '');
-    _interestsController = TextEditingController(
-        text: widget.person?.interests.join(', ') ?? ''); // For displaying interests
+    _dateOfBirthController = TextEditingController(text: widget.person?.dateOfBirth ?? '');
+    _languageController = TextEditingController(text: widget.person?.language ?? '');
+    _interestsController = TextEditingController(text: widget.person?.interests.join(', ') ?? '');
   }
 
   @override
@@ -71,9 +67,9 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
       email: _emailController.text,
       dateOfBirth: _dateOfBirthController.text,
       language: _languageController.text,
-      interests: _interestsController.text.split(',').map((e) => e.trim()).toList(), birthDate: '',
+      interests: _interestsController.text.split(',').map((e) => e.trim()).toList(),
+      birthDate: '',
     );
-
 
     // Check if it's an update or a new person
     if (widget.person != null) {
@@ -85,10 +81,15 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
 
   Future<void> _createPerson(Person person) async {
     final String createUrl = '${dotenv.env['BASE_URL']}/api/people';
+    final String token = Provider.of<GlobalState>(context, listen: false).token ?? '';
+
     try {
       final response = await http.post(
         Uri.parse(createUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Use token from GlobalState
+        },
         body: jsonEncode({
           'name': person.name,
           'surname': person.surname,
@@ -106,9 +107,9 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
         final createdPerson = Person.fromJson(responseData);
 
         widget.onSave(createdPerson); // Send created person to the parent widget
-         Navigator.pushReplacement(
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          MaterialPageRoute(builder: (context) => DashboardScreen()),
         ); // Close the form after saving
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Person added successfully')),
@@ -127,10 +128,15 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
 
   Future<void> _updatePerson(Person person) async {
     final String updateUrl = '${dotenv.env['BASE_URL']}/api/people/${person.id}';
+    final String token = Provider.of<GlobalState>(context, listen: false).token ?? '';
+
     try {
       final response = await http.put(
         Uri.parse(updateUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Use token from GlobalState
+        },
         body: jsonEncode({
           'name': person.name,
           'surname': person.surname,
@@ -148,9 +154,9 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
         final updatedPerson = Person.fromJson(responseData);
 
         widget.onSave(updatedPerson); // Send updated person to the parent widget
-         Navigator.pushReplacement(
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          MaterialPageRoute(builder: (context) => DashboardScreen()),
         ); // Close the form after saving
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Person updated successfully')),

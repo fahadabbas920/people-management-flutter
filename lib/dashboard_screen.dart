@@ -1,13 +1,11 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:myapp/login_screen.dart';
-import 'add_person_screen.dart';
-import 'person.dart';
-import 'global_state.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'global_state.dart';
+import 'package:provider/provider.dart';
+import 'add_person_screen.dart';
+import 'person.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,6 +16,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   List<Person> _persons = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -26,101 +25,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _fetchPersons() async {
-    final String peopleUrl = '${dotenv.env['BASE_URL']}/api/people';
+    final String fetchUrl = '${dotenv.env['BASE_URL']}/api/people';
+    final token = Provider.of<GlobalState>(context, listen: false).token ?? ''; // Use the token
+
     try {
-      final response = await http.get(Uri.parse(peopleUrl));
+      final response = await http.get(
+        Uri.parse(fetchUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Use token for authentication
+        },
+      );
 
       if (response.statusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(response.body);
+        final List<dynamic> data = jsonDecode(response.body);
         setState(() {
-          _persons = responseData
-              .map((personData) => Person.fromJson(personData))
-              .toList();
+          _persons = data.map((personJson) => Person.fromJson(personJson)).toList();
+          _isLoading = false;
         });
-            } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to fetch persons: ${response.body}')),
-        );
+      } else {
+        throw Exception('Failed to load persons');
       }
     } catch (e) {
-      print('Error fetching persons: $e');
+      setState(() {
+        _isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('An error occurred while fetching data.')),
+        const SnackBar(content: Text('Failed to load persons')),
       );
     }
   }
 
-  void _addOrUpdatePerson(Person person, [int? index]) {
-    setState(() {
-      if (index != null) {
-        // Update existing person
-        _persons[index] = person;
-      } else {
-        // Add new person
-        _persons.add(person);
-      }
-    });
-  }
-
-  void _removePerson(int index) async {
-    final personId = _persons[index].id;
-    final String deleteUrl = '${dotenv.env['BASE_URL']}/api/people/$personId';
-
-    try {
-      final response = await http.delete(Uri.parse(deleteUrl));
-      if (response.statusCode == 200) {
-        setState(() {
-          _persons.removeAt(index);
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Person deleted successfully')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to delete person')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('An error occurred while deleting the person.')),
-      );
-    }
-  }
-
-  void _navigateToAddPersonScreen(BuildContext context,
-      [Person? person, int? index]) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddPersonScreen(
-          onSave: (newPerson) {
-            _addOrUpdatePerson(newPerson, index);
-            Navigator.pop(context);
-          },
-          person: person,
-        ),
-      ),
-    );
-  }
-
-  void _logout(BuildContext context) async {
+  Future<void> _logout() async {
     final String logoutUrl = '${dotenv.env['BASE_URL']}/api/logout';
+    final token = Provider.of<GlobalState>(context, listen: false).token ?? ''; // Use token for logout
+
     try {
-      final response = await http.post(Uri.parse(logoutUrl));
+      final response = await http.post(
+        Uri.parse(logoutUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Use token for logout
+        },
+      );
 
       if (response.statusCode == 200) {
         // Clear global state
-        await Provider.of<GlobalState>(context, listen: false).clearEmail();
+        await Provider.of<GlobalState>(context, listen: false).clearSession();
 
-        // Navigate back to LoginScreen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginScreen()),
+        // Navigate back to the login screen
+        Navigator.pushReplacementNamed(context, '/login');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logout successful!')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to logout')),
+          SnackBar(content: Text('Failed to logout: ${response.body}')),
         );
       }
     } catch (e) {
@@ -128,6 +89,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SnackBar(content: Text('An error occurred during logout.')),
       );
     }
+  }
+
+  void _onSave(Person person) {
+    setState(() {
+      _persons.add(person); // Add the newly created person to the list
+    });
   }
 
   @override
@@ -138,55 +105,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => _logout(context),
+            onPressed: _logout,
           ),
         ],
       ),
-      body: _persons.isEmpty
-          ? const Center(child: Text('No persons added.'))
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
               itemCount: _persons.length,
               itemBuilder: (context, index) {
                 final person = _persons[index];
-                return Card(
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  child: ListTile(
-                    title: Text('${person.name} ${person.surname}'),
-                    subtitle: Text(
-                      'ID: ${person.idNumber}\n'
-                      'Mobile: ${person.mobileNumber}\n'
-                      'Email: ${person.email}',
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _navigateToAddPersonScreen(
-                              context, person, index),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _removePerson(index),
-                        ),
-                      ],
-                    ),
-                  ),
+                return ListTile(
+                  title: Text('${person.name} ${person.surname}'),
+                  subtitle: Text(person.email),
                 );
               },
             ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_add), label: 'Add Person'),
-        ],
-        onTap: (index) {
-          if (index == 1) {
-            _navigateToAddPersonScreen(context);
-          }
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddPersonScreen(onSave: _onSave),
+            ),
+          );
         },
+        child: const Icon(Icons.add),
       ),
     );
   }
