@@ -31,15 +31,20 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
   @override
   void initState() {
     super.initState();
-
     _nameController = TextEditingController(text: widget.person?.name ?? '');
-    _surnameController = TextEditingController(text: widget.person?.surname ?? '');
-    _idNumberController = TextEditingController(text: widget.person?.idNumber ?? '');
-    _mobileNumberController = TextEditingController(text: widget.person?.mobileNumber ?? '');
+    _surnameController =
+        TextEditingController(text: widget.person?.surname ?? '');
+    _idNumberController = TextEditingController(
+        text: widget.person?.south_african_id_number ?? '');
+    _mobileNumberController =
+        TextEditingController(text: widget.person?.mobile_number ?? '');
     _emailController = TextEditingController(text: widget.person?.email ?? '');
-    _dateOfBirthController = TextEditingController(text: widget.person?.dateOfBirth ?? '');
-    _languageController = TextEditingController(text: widget.person?.language ?? '');
-    _interestsController = TextEditingController(text: widget.person?.interests.join(', ') ?? '');
+    _dateOfBirthController =
+        TextEditingController(text: widget.person?.date_of_birth ?? '');
+    _languageController =
+        TextEditingController(text: widget.person?.language ?? '');
+    _interestsController =
+        TextEditingController(text: widget.person?.interests.join(', ') ?? '');
   }
 
   @override
@@ -56,22 +61,22 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
   }
 
   Future<void> _savePerson() async {
-    if (_formKey.currentState?.validate() != true) return;
+    if (!_formKey.currentState!.validate()) return;
 
     final newPerson = Person(
-      id: widget.person?.id ?? 0, // If new person, id will be 0
+      id: widget.person?.id ?? 0,
       name: _nameController.text,
       surname: _surnameController.text,
-      idNumber: _idNumberController.text,
-      mobileNumber: _mobileNumberController.text,
+      south_african_id_number: _idNumberController.text,
+      mobile_number: _mobileNumberController.text,
       email: _emailController.text,
-      dateOfBirth: _dateOfBirthController.text,
+      date_of_birth: _dateOfBirthController.text,
       language: _languageController.text,
-      interests: _interestsController.text.split(',').map((e) => e.trim()).toList(),
+      interests:
+          _interestsController.text.split(',').map((e) => e.trim()).toList(),
       birthDate: '',
     );
 
-    // Check if it's an update or a new person
     if (widget.person != null) {
       await _updatePerson(newPerson);
     } else {
@@ -81,36 +86,26 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
 
   Future<void> _createPerson(Person person) async {
     final String createUrl = '${dotenv.env['BASE_URL']}/api/people';
-    final String token = Provider.of<GlobalState>(context, listen: false).token ?? '';
+    final String token =
+        Provider.of<GlobalState>(context, listen: false).token ?? '';
 
     try {
       final response = await http.post(
         Uri.parse(createUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token', // Use token from GlobalState
+          'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'name': person.name,
-          'surname': person.surname,
-          'south_african_id_number': person.idNumber,
-          'mobile_number': person.mobileNumber,
-          'email': person.email,
-          'date_of_birth': person.dateOfBirth,
-          'language': person.language,
-          'interests': person.interests,
-        }),
+        body: jsonEncode(person.toJson()),
       );
 
       if (response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
         final createdPerson = Person.fromJson(responseData);
 
-        widget.onSave(createdPerson); // Send created person to the parent widget
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => DashboardScreen()),
-        ); // Close the form after saving
+        widget.onSave(createdPerson);
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) => const DashboardScreen()));
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Person added successfully')),
         );
@@ -127,37 +122,28 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
   }
 
   Future<void> _updatePerson(Person person) async {
-    final String updateUrl = '${dotenv.env['BASE_URL']}/api/people/${person.id}';
-    final String token = Provider.of<GlobalState>(context, listen: false).token ?? '';
+    final String updateUrl =
+        '${dotenv.env['BASE_URL']}/api/people/${person.id}';
+    final String token =
+        Provider.of<GlobalState>(context, listen: false).token ?? '';
 
     try {
       final response = await http.put(
         Uri.parse(updateUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token', // Use token from GlobalState
+          'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'name': person.name,
-          'surname': person.surname,
-          'south_african_id_number': person.idNumber,
-          'mobile_number': person.mobileNumber,
-          'email': person.email,
-          'date_of_birth': person.dateOfBirth,
-          'language': person.language,
-          'interests': person.interests,
-        }),
+        body: jsonEncode(person.toJson()),
       );
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         final updatedPerson = Person.fromJson(responseData);
 
-        widget.onSave(updatedPerson); // Send updated person to the parent widget
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => DashboardScreen()),
-        ); // Close the form after saving
+        widget.onSave(updatedPerson);
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) => const DashboardScreen()));
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Person updated successfully')),
         );
@@ -168,7 +154,8 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('An error occurred while updating person.')),
+        const SnackBar(
+            content: Text('An error occurred while updating person.')),
       );
     }
   }
@@ -188,47 +175,57 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'First Name'),
-                validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter a name' : null,
               ),
               TextFormField(
                 controller: _surnameController,
                 decoration: const InputDecoration(labelText: 'Surname'),
-                validator: (value) => value!.isEmpty ? 'Please enter a surname' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter a surname' : null,
               ),
               TextFormField(
                 controller: _idNumberController,
                 decoration: const InputDecoration(labelText: 'ID Number'),
-                validator: (value) => value!.isEmpty ? 'Please enter an ID number' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter an ID number' : null,
               ),
               TextFormField(
                 controller: _mobileNumberController,
                 decoration: const InputDecoration(labelText: 'Mobile Number'),
-                validator: (value) => value!.isEmpty ? 'Please enter a mobile number' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter a mobile number' : null,
               ),
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
-                validator: (value) => value!.isEmpty ? 'Please enter an email' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter an email' : null,
               ),
               TextFormField(
                 controller: _dateOfBirthController,
                 decoration: const InputDecoration(labelText: 'Date of Birth'),
-                validator: (value) => value!.isEmpty ? 'Please enter a date of birth' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter a date of birth' : null,
               ),
               TextFormField(
                 controller: _languageController,
                 decoration: const InputDecoration(labelText: 'Language'),
-                validator: (value) => value!.isEmpty ? 'Please enter a language' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter a language' : null,
               ),
               TextFormField(
                 controller: _interestsController,
-                decoration: const InputDecoration(labelText: 'Interests (comma-separated)'),
-                validator: (value) => value!.isEmpty ? 'Please enter interests' : null,
+                decoration: const InputDecoration(
+                    labelText: 'Interests (comma-separated)'),
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter interests' : null,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _savePerson,
-                child: Text(widget.person == null ? 'Add Person' : 'Update Person'),
+                child: Text(
+                    widget.person == null ? 'Add Person' : 'Update Person'),
               ),
             ],
           ),

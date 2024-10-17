@@ -2,10 +2,10 @@ class Person {
   final int id; // Add id property
   final String name;
   final String surname;
-  final String idNumber; // Change to match the JSON key
-  final String mobileNumber; // Add mobile number property
+  final String south_african_id_number; // Change to match the JSON key
+  final String mobile_number; // Add mobile number property
   final String email; // Add email property
-  final String dateOfBirth; // Add date of birth property
+  final String date_of_birth; // Add date of birth property
   final String language; // Add language property
   final List<String> interests; // Add interests property
 
@@ -13,10 +13,10 @@ class Person {
     required this.id,
     required this.name,
     required this.surname,
-    required this.idNumber,
-    required this.mobileNumber,
+    required this.south_african_id_number,
+    required this.mobile_number,
     required this.email,
-    required this.dateOfBirth,
+    required this.date_of_birth,
     required this.language,
     required this.interests,
     required String birthDate,
@@ -27,10 +27,10 @@ class Person {
       'id': id,
       'name': name,
       'surname': surname,
-      'idNumber': idNumber,
-      'mobileNumber': mobileNumber,
+      'south_african_id_number': south_african_id_number,
+      'mobile_number': mobile_number,
       'email': email,
-      'dateOfBirth': dateOfBirth,
+      'date_of_birth': date_of_birth,
       'language': language,
       'interests': interests,
     };
@@ -41,10 +41,10 @@ class Person {
       id: json['id'],
       name: json['name'],
       surname: json['surname'],
-      idNumber: json['south_african_id_number'],
-      mobileNumber: json['mobile_number'],
+      south_african_id_number: json['south_african_id_number'],
+      mobile_number: json['mobile_number'],
       email: json['email'],
-      dateOfBirth: json['date_of_birth'],
+      date_of_birth: json['date_of_birth'],
       language: json['language'],
       interests: List<String>.from(json['interests'] ?? []),
       birthDate: '', // Safely handle null

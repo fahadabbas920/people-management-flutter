@@ -6,6 +6,8 @@ import 'global_state.dart';
 import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -40,40 +42,24 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (response.statusCode == 200) {
-        // Parse the response body
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
         final user = responseBody['user'];
         final token = responseBody['token'];
         String userId = user['id'].toString();
-        // Save email, user data, and token in global state
+
+        // Update in-memory global state (no saving to SharedPreferences)
         Provider.of<GlobalState>(context, listen: false)
             .setEmailAndToken(email, token, userId, user['name']);
 
         // Navigate to the Dashboard after successful login
         Navigator.pushReplacementNamed(context, '/dashboard');
       } else {
-        // Handle login failure
         _showErrorDialog(
             'Login failed. Please check your credentials and try again.');
       }
     } catch (e) {
-      // Handle exceptions
       _showErrorDialog('An error occurred: $e');
     }
-  }
-
-  String extractCsrfToken(String? cookies) {
-    if (cookies != null) {
-      // Split cookies and find CSRF token
-      final cookieList = cookies.split(';');
-      for (var cookie in cookieList) {
-        if (cookie.contains('XSRF-TOKEN')) {
-          // Adjust based on actual cookie name
-          return cookie.split('=')[1].trim();
-        }
-      }
-    }
-    throw Exception('CSRF token not found in cookies');
   }
 
   void _login() {

@@ -1,65 +1,68 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Add this line
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class GlobalState with ChangeNotifier {
+  final _secureStorage = const FlutterSecureStorage();
+
   String? _email;
-  String? _token; 
-  String? _userId; 
-  String? _userName; 
+  String? _token;
+  String? _userId;
+  String? _userName;
 
   // Getters for email, token, user ID, and user name
   String? get email => _email;
   String? get token => _token;
-  String? get userId => _userId; 
-  String? get userName => _userName; 
+  String? get userId => _userId;
+  String? get userName => _userName;
 
   GlobalState() {
-    loadSession(); 
+    // Load securely stored data when the GlobalState is initialized
+    _loadFromSecureStorage();
   }
 
-  Future<void> setEmailAndToken(String email, String token, String userId, String userName) async {
+  // Setters for updating email, token, userId, and userName with secure persistence
+  void setEmailAndToken(
+      String email, String token, String userId, String userName) async {
     _email = email;
-    _token = token; 
-    _userId = userId; 
-    _userName = userName; 
-    notifyListeners(); 
-    final prefs = await SharedPreferences.getInstance();
-    
-    try {
-      await prefs.setString('email', email);
-      await prefs.setString('token', token);
-      await prefs.setString('userId', userId);
-      await prefs.setString('userName', userName);
-    } catch (e) {
-      print('Error saving to SharedPreferences: $e');
-    }
+    _token = token;
+    _userId = userId;
+    _userName = userName;
+    notifyListeners();
+    _saveToSecureStorage();
   }
 
-  Future<void> clearSession() async {
+  // Clear session (with secure persistence)
+  void clearSession() async {
     _email = null;
-    _token = null; 
-    _userId = null; 
-    _userName = null; 
-    notifyListeners(); 
-    final prefs = await SharedPreferences.getInstance();
-    
-    try {
-      await prefs.remove('email'); 
-      await prefs.remove('token'); 
-      await prefs.remove('userId'); 
-      await prefs.remove('userName'); 
-    } catch (e) {
-      print('Error removing from SharedPreferences: $e');
-    }
+    _token = null;
+    _userId = null;
+    _userName = null;
+    notifyListeners();
+    _clearSecureStorage();
   }
 
-  Future<void> loadSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    _email = prefs.getString('email'); 
-    _token = prefs.getString('token'); 
-    _userId = prefs.getString('userId'); 
-    _userName = prefs.getString('userName'); 
-    notifyListeners(); 
+  // Save to secure storage
+  void _saveToSecureStorage() async {
+    await _secureStorage.write(key: 'email', value: _email);
+    await _secureStorage.write(key: 'token', value: _token);
+    await _secureStorage.write(key: 'userId', value: _userId);
+    await _secureStorage.write(key: 'userName', value: _userName);
+  }
+
+  // Load from secure storage
+  void _loadFromSecureStorage() async {
+    _email = await _secureStorage.read(key: 'email');
+    _token = await _secureStorage.read(key: 'token');
+    _userId = await _secureStorage.read(key: 'userId');
+    _userName = await _secureStorage.read(key: 'userName');
+    notifyListeners();
+  }
+
+  // Clear secure storage
+  void _clearSecureStorage() async {
+    await _secureStorage.delete(key: 'email');
+    await _secureStorage.delete(key: 'token');
+    await _secureStorage.delete(key: 'userId');
+    await _secureStorage.delete(key: 'userName');
   }
 }

@@ -26,21 +26,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchPersons() async {
     final String fetchUrl = '${dotenv.env['BASE_URL']}/api/people';
-    final token = Provider.of<GlobalState>(context, listen: false).token ?? ''; // Use the token
+    final token = Provider.of<GlobalState>(context, listen: false).token ?? '';
 
     try {
       final response = await http.get(
         Uri.parse(fetchUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token', // Use token for authentication
+          'Authorization': 'Bearer $token', // Add token to Authorization header
         },
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
-          _persons = data.map((personJson) => Person.fromJson(personJson)).toList();
+          _persons =
+              data.map((personJson) => Person.fromJson(personJson)).toList();
           _isLoading = false;
         });
       } else {
@@ -56,26 +57,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _deletePerson(int personId) async {
+    // Change personId to int
+    final String deleteUrl = '${dotenv.env['BASE_URL']}/api/people/$personId';
+    final token = Provider.of<GlobalState>(context, listen: false).token ?? '';
+
+    try {
+      final response = await http.delete(
+        Uri.parse(deleteUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Use token in Authorization header
+        },
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _persons.removeWhere(
+              (person) => person.id == personId); // Handle with int
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Person deleted successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete person: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An error occurred during deletion.')),
+      );
+    }
+  }
+
+  void _editPerson(Person person) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddPersonScreen(
+          onSave: (updatedPerson) {
+            setState(() {
+              int index = _persons.indexWhere((p) => p.id == updatedPerson.id);
+              if (index != -1) {
+                _persons[index] = updatedPerson; // Update person in list
+              }
+            });
+          },
+          person: person, // Pass the person to edit
+        ),
+      ),
+    );
+  }
+
+  void _onSave(Person person) {
+    setState(() {
+      _persons.add(person); // Add newly created person to list
+    });
+  }
+
   Future<void> _logout() async {
     final String logoutUrl = '${dotenv.env['BASE_URL']}/api/logout';
-    final token = Provider.of<GlobalState>(context, listen: false).token ?? ''; // Use token for logout
+    final token = Provider.of<GlobalState>(context, listen: false).token ?? '';
 
     try {
       final response = await http.post(
         Uri.parse(logoutUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token', // Use token for logout
+          'Authorization': 'Bearer $token',
         },
       );
 
       if (response.statusCode == 200) {
-        // Clear global state
-        await Provider.of<GlobalState>(context, listen: false).clearSession();
-
-        // Navigate back to the login screen
+        Provider.of<GlobalState>(context, listen: false).clearSession();
         Navigator.pushReplacementNamed(context, '/login');
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Logout successful!')),
         );
@@ -89,12 +145,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SnackBar(content: Text('An error occurred during logout.')),
       );
     }
-  }
-
-  void _onSave(Person person) {
-    setState(() {
-      _persons.add(person); // Add the newly created person to the list
-    });
   }
 
   @override
@@ -118,6 +168,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 return ListTile(
                   title: Text('${person.name} ${person.surname}'),
                   subtitle: Text(person.email),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _editPerson(person), // Edit person
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () =>
+                            _deletePerson(person.id), // Delete person as int
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
