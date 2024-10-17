@@ -6,6 +6,7 @@ import 'global_state.dart';
 import 'package:provider/provider.dart';
 import 'add_person_screen.dart';
 import 'person.dart';
+import 'package:go_router/go_router.dart'; // Import GoRouter
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -92,21 +93,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _editPerson(Person person) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddPersonScreen(
-          onSave: (updatedPerson) {
-            setState(() {
-              int index = _persons.indexWhere((p) => p.id == updatedPerson.id);
-              if (index != -1) {
-                _persons[index] = updatedPerson; // Update person in list
-              }
-            });
-          },
-          person: person, // Pass the person to edit
-        ),
-      ),
+    context.push(
+      '/edit-person',
+      extra: {
+        'onSave': (updatedPerson) {
+          setState(() {
+            int index = _persons.indexWhere((p) => p.id == updatedPerson.id);
+            if (index != -1) {
+              _persons[index] = updatedPerson; // Update person in list
+            }
+          });
+        },
+        'person': person, // Pass the person to edit
+      },
     );
   }
 
@@ -131,7 +130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       if (response.statusCode == 200) {
         Provider.of<GlobalState>(context, listen: false).clearSession();
-        Navigator.pushReplacementNamed(context, '/login');
+        context.go('/login'); // Use GoRouter for logout navigation
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Logout successful!')),
         );
@@ -187,11 +186,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddPersonScreen(onSave: _onSave),
-            ),
+          context.push(
+            '/add-person',
+            extra: {'onSave': _onSave}, // Use GoRouter for adding a new person
           );
         },
         child: const Icon(Icons.add),

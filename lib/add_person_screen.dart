@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'global_state.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart'; // Import GoRouter
 
 class AddPersonScreen extends StatefulWidget {
   final Function(Person) onSave;
@@ -104,8 +105,7 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
         final createdPerson = Person.fromJson(responseData);
 
         widget.onSave(createdPerson);
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (context) => const DashboardScreen()));
+        context.go('/dashboard'); // Go back to dashboard after success
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Person added successfully')),
         );
@@ -142,8 +142,7 @@ class _AddPersonScreenState extends State<AddPersonScreen> {
         final updatedPerson = Person.fromJson(responseData);
 
         widget.onSave(updatedPerson);
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (context) => const DashboardScreen()));
+        context.go('/dashboard'); // Go back to dashboard after success
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Person updated successfully')),
         );

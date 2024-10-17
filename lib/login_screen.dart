@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'global_state.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -52,7 +53,8 @@ class _LoginScreenState extends State<LoginScreen> {
             .setEmailAndToken(email, token, userId, user['name']);
 
         // Navigate to the Dashboard after successful login
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        // Navigator.pushReplacementNamed(context, '/dashboard');
+        context.go('/dashboard');
       } else {
         _showErrorDialog(
             'Login failed. Please check your credentials and try again.');
